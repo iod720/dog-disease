@@ -6,7 +6,7 @@ import joblib
 
 app = Flask(__name__)
 
-
+# Load the dataset and model
 data = pd.read_csv('dog_diseases.csv')
 X = data.drop('diseases', axis=1)
 
@@ -56,6 +56,11 @@ def get_filtered_symptoms():
 @app.route('/predict', methods=['POST'])
 def predict():
     selected_symptoms = request.json['symptoms']
+
+    # Check if there are no symptoms selected
+    if not selected_symptoms:
+        return jsonify({'error': 'No symptoms selected. Please select at least one symptom.'}), 400
+
     input_vector = {symptom: 1 if symptom in selected_symptoms else 0 for symptom in all_symptoms}
     input_df = pd.DataFrame([input_vector])
 
@@ -78,3 +83,4 @@ def predict():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
