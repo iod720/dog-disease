@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dog Disease Predictor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            margin: 0;
+            background: linear-gradient(to right, #ece9e6, #ffffff); /* Nice soft background */
+            min-height: 100vh;
+        }
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #ff7f50; /* Coral Orange Button */
+            color: white;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #ff5722; /* Darker orange when hovering */
+        }
+        button.selected {
+            background: #2196F3; /* Blue when selected */
+        }
+        #symptom-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #selected-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #selected-list li {
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 3px 0;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .prediction-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 10px;
+            background: #f9f9f9;
+            text-align: center;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h2>🐶 Dog Disease Predictor 🐶</h2>
+
+    <div id="symptom-buttons"></div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <h4>Selected Symptoms:</h4>
+        <ul id="selected-list"></ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="predictDisease()">Predict Disease</button>
+    </div>
+
+    <div id="prediction-results" style="margin-top: 30px;"></div>
+
+    <script>
+        let selectedSymptoms = [];
+
+        function loadInitialSymptoms() {
+            fetch('/get_initial_symptoms')
+                .then(res => res.json())
+                .then(data => renderSymptoms(data.symptoms));
+        }
+
+        function renderSymptoms(symptoms) {
+            const container = document.getElementById('symptom-buttons');
+            container.innerHTML = '';
+            symptoms.forEach(symptom => {
+                const btn = document.createElement('button');
+                btn.textContent = symptom;
+                btn.onclick = () => toggleSymptom(symptom, btn);
+                if (selectedSymptoms.includes(symptom)) btn.classList.add('selected');
+                container.appendChild(btn);
+            });
+        }
+
+        function toggleSymptom(symptom, btn) {
+            if (selectedSymptoms.includes(symptom)) {
+                selectedSymptoms = selectedSymptoms.filter(s => s !== symptom);
+                btn.classList.remove('selected');
+            } else {
+                selectedSymptoms.push(symptom);
+                btn.classList.add('selected');
+            }
+            updateSelectedList();
+            fetchFilteredSymptoms();
+        }
+
+        function updateSelectedList() {
+            const list = document.getElementById('selected-list');
+            list.innerHTML = '';
+            selectedSymptoms.forEach(symptom => {
+                const item = document.createElement('li');
+                item.textContent = symptom;
+                list.appendChild(item);
+            });
+        }
+
+        function fetchFilteredSymptoms() {
+            fetch('/get_filtered_symptoms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selected_symptoms: selectedSymptoms })
+            })
+            .then(res => res.json())
+            .then(data => renderSymptoms(data.remaining_symptoms));
+        }
+
+        function predictDisease() {
+            fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symptoms: selectedSymptoms })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('prediction-results');
+                resultsDiv.innerHTML = '<h4 style="text-align:center;">Prediction Results:</h4>';
+
+                data.predictions.forEach(pred => {
+                    const card = document.createElement('div');
+                    card.className = 'prediction-card';
+                    card.innerHTML = `<strong>${pred.disease}</strong><br>Chance: ${pred.chance_percent}%`;
+                    resultsDiv.appendChild(card);
+                });
+            });
+        }
+
+        loadInitialSymptoms();
+    </script>
+</body>
+</html>
